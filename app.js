@@ -479,7 +479,7 @@ function saveWrong()     { lsSet('aws_wrong', wrongIds); }
 /* ─── VERİ HAZIRLIĞI ────────────────────────────────────────── */
 function sanitize(q) {
   return {
-    id:             String(q.id   ?? Math.random()),
+    id:             String(q.id    ?? Math.random()),
     video:          String(q.video ?? 'unknown'),
     konu:           String(q.konu  ?? 'Genel'),
     zorluk:         String(q.zorluk ?? 'orta'),
@@ -501,9 +501,9 @@ function getFiltered() {
   switch (STATE.filter) {
     case 'critical':  list = list.filter(q => q.cikma_ihtimali >= 90); break;
     case 'final':     list = list.filter(q => q.cikma_ihtimali >= 70); break;
-    case 'last2h':    list = list.filter(q => q.cikma_ihtimali >= 90); break;
+    case 'last2hours':list = list.filter(q => q.cikma_ihtimali >= 90); break;
     case 'wrong':     list = list.filter(q => wrongIds[q.id]);   break;
-    case 'favorites': list = list.filter(q => favorites[q.id]);  break;
+    case 'fav':       list = list.filter(q => favorites[q.id]);  break;
     case 'topic':
       if (STATE.topic) list = list.filter(q => q.konu === STATE.topic);
       break;
@@ -544,35 +544,35 @@ function getStats() {
   const answered = correct + wrong;
   const rate = answered > 0 ? Math.round((correct / answered) * 100) : 0;
   const fav  = Object.keys(favorites).filter(k => favorites[k]).length;
-  return { total: QUESTIONS.length, correct, wrong, rate, fav };
+  return { total: QUESTIONS.length, answered, correct, wrong, rate, fav };
 }
 
 /* ─── HEADER GÜNCELLE ───────────────────────────────────────── */
 function updateStats() {
   const s = getStats();
-  document.getElementById('numTotal').textContent   = s.total;
-  document.getElementById('numCorrect').textContent = s.correct;
-  document.getElementById('numWrong').textContent   = s.wrong;
-  document.getElementById('numFav').textContent     = s.fav;
-  document.getElementById('numRate').textContent    = s.rate + '%';
-  const fill = s.total > 0 ? ((s.correct + s.wrong) / s.total) * 100 : 0;
-  document.getElementById('progressBarFill').style.width = fill + '%';
+  document.getElementById('statTotal').textContent   = s.answered;
+  document.getElementById('statCorrect').textContent = s.correct;
+  document.getElementById('statWrong').textContent   = s.wrong;
+  document.getElementById('statFav').textContent     = s.fav;
+  document.getElementById('statRate').textContent    = s.rate + '%';
+  const fill = s.total > 0 ? (s.answered / s.total) * 100 : 0;
+  document.getElementById('progressBar').style.width = fill + '%';
 }
 
 /* ─── NAV SAYAÇLARI ─────────────────────────────────────────── */
 function updateCounts() {
-  document.getElementById('count-all').textContent       = QUESTIONS.length;
-  document.getElementById('count-critical').textContent  = QUESTIONS.filter(q => q.cikma_ihtimali >= 90).length;
-  document.getElementById('count-final').textContent     = QUESTIONS.filter(q => q.cikma_ihtimali >= 70).length;
-  document.getElementById('count-last2h').textContent    = QUESTIONS.filter(q => q.cikma_ihtimali >= 90).length;
-  document.getElementById('count-wrong').textContent     = QUESTIONS.filter(q => wrongIds[q.id]).length;
-  document.getElementById('count-favorites').textContent = QUESTIONS.filter(q => favorites[q.id]).length;
+  document.getElementById('countAll').textContent      = QUESTIONS.length;
+  document.getElementById('countCritical').textContent = QUESTIONS.filter(q => q.cikma_ihtimali >= 90).length;
+  document.getElementById('countFinal').textContent    = QUESTIONS.filter(q => q.cikma_ihtimali >= 70).length;
+  document.getElementById('countLast').textContent     = QUESTIONS.filter(q => q.cikma_ihtimali >= 90).length;
+  document.getElementById('countWrong').textContent    = QUESTIONS.filter(q => wrongIds[q.id]).length;
+  document.getElementById('countFav').textContent      = QUESTIONS.filter(q => favorites[q.id]).length;
 }
 
 /* ─── TOPIC NAV ─────────────────────────────────────────────── */
 function renderTopicNav() {
   const topics    = getTopics();
-  const container = document.getElementById('topicNav');
+  const container = document.getElementById('topicList');
   container.innerHTML = '';
 
   Object.entries(topics)
@@ -583,9 +583,10 @@ function renderTopicNav() {
       btn.dataset.filter = 'topic';
       btn.dataset.topic  = topic;
       btn.innerHTML = `
-        📌
-        ${topic}
-        ${count}`;
+        <span class="nav-icon">📂</span>
+        <span class="nav-label">${topic}</span>
+        <span class="nav-count">${count}</span>`;
+      
       btn.addEventListener('click', () => {
         STATE.filter = 'topic';
         STATE.topic  = topic;
@@ -603,33 +604,40 @@ function renderTopicNav() {
 
 /* ─── AKTİF NAV ─────────────────────────────────────────────── */
 function updateActiveNav() {
-  document.querySelectorAll('.nav-btn[data-filter]').forEach(btn => {
-    const isActive =
-      btn.dataset.filter === STATE.filter &&
-      (btn.dataset.filter !== 'topic' || btn.dataset.topic === STATE.topic);
-    btn.classList.toggle('active', isActive);
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    // Önce hepsinden active class'ını kaldır
+    btn.classList.remove('active');
+    
+    // Filtre 'all', 'critical', vb. ana butonlarsa
+    if (btn.dataset.mode === STATE.filter) {
+      btn.classList.add('active');
+    }
+    // Konu butonlarıysa
+    else if (btn.dataset.filter === 'topic' && STATE.filter === 'topic' && btn.dataset.topic === STATE.topic) {
+      btn.classList.add('active');
+    }
   });
 }
 
 /* ─── MODE BANNER ───────────────────────────────────────────── */
 const MODE_INFO = {
-  all:       { icon:'📚', title:'Tüm Sorular',   desc:'Tüm soru havuzundan çalışıyorsunuz' },
-  critical:  { icon:'🔥', title:'En Kritik',     desc:'Çıkma ihtimali ≥90 olan sorular' },
-  final:     { icon:'🎯', title:'Final Modu',    desc:'Çıkma ihtimali ≥70 olan sorular' },
-  last2h:    { icon:'🚀', title:'Son 2 Saat',    desc:'En kritik sorular — sınava girerken çalış!' },
-  wrong:     { icon:'❌', title:'Yanlışlarım',   desc:'Yanlış cevapladığın sorular' },
-  favorites: { icon:'⭐', title:'Favorilerim',   desc:'Favori olarak işaretlediğin sorular' },
-  topic:     { icon:'📂', title:'Konu Filtresi', desc:'' }
+  all:        { icon:'📚', title:'Tüm Sorular',  desc:'Tüm soru havuzundan çalışıyorsunuz' },
+  critical:   { icon:'🔥', title:'En Kritik',    desc:'Çıkma ihtimali ≥90 olan sorular' },
+  final:      { icon:'🎯', title:'Final Modu',   desc:'Çıkma ihtimali ≥70 olan sorular' },
+  last2hours: { icon:'🚀', title:'Son 2 Saat',   desc:'En kritik sorular — sınava girerken çalış!' },
+  wrong:      { icon:'❌', title:'Yanlışlarım',  desc:'Yanlış cevapladığın sorular' },
+  fav:        { icon:'⭐', title:'Favorilerim',  desc:'Favori olarak işaretlediğin sorular' },
+  topic:      { icon:'📂', title:'Konu Filtresi',desc:'' }
 };
 
 function updateBanner(count) {
   const info  = MODE_INFO[STATE.filter] || MODE_INFO.all;
   const title = STATE.filter === 'topic' ? (STATE.topic || 'Konu') : info.title;
   const desc  = STATE.filter === 'topic' ? `"${STATE.topic}" konusundaki sorular` : info.desc;
-  document.getElementById('modeBannerIcon').textContent  = info.icon;
-  document.getElementById('modeBannerTitle').textContent = title;
-  document.getElementById('modeBannerDesc').textContent  = desc;
-  document.getElementById('modeBannerCount').textContent = count + ' soru';
+  document.getElementById('bannerIcon').textContent  = info.icon;
+  document.getElementById('bannerTitle').textContent = title;
+  document.getElementById('bannerDesc').textContent  = desc;
+  document.getElementById('bannerCount').textContent = count + ' soru';
 }
 
 /* ─── YARDIMCI ──────────────────────────────────────────────── */
@@ -641,9 +649,9 @@ function priorityClass(p) {
 }
 
 function probBadgeClass(p) {
-  if (p >= 90) return 'badge-prob prob-critical';
-  if (p >= 75) return 'badge-prob prob-high';
-  return 'badge-prob';
+  if (p >= 90) return 'prob-critical';
+  if (p >= 75) return 'prob-high';
+  return '';
 }
 
 /* ─── KART HTML ─────────────────────────────────────────────── */
@@ -653,7 +661,7 @@ function buildCard(q, idx) {
   const isFav      = !!favorites[q.id];
   const userAnswer = answers[q.id];
 
-  let cardClass = `q-card ${priorityClass(q.cikma_ihtimali)}`;
+  let cardClass = priorityClass(q.cikma_ihtimali);
   if (answered) cardClass += isCorrect ? ' answered-correct' : ' answered-wrong';
 
   const opts = Object.entries(q.secenekler).map(([key, val]) => {
@@ -663,9 +671,9 @@ function buildCard(q, idx) {
       if (key === userAnswer && userAnswer !== q.dogru) cls += ' wrong';
     }
     return `
-      <button>
-        ${key}
-        ${val}
+      <button class="${cls}" data-qid="${q.id}" data-key="${key}" ${answered ? 'disabled' : ''}>
+        <span class="option-key">${key}</span>
+        <span class="option-val">${val}</span>
       </button>`;
   }).join('');
 
@@ -674,35 +682,40 @@ function buildCard(q, idx) {
   const explIcon  = isCorrect ? '✅' : (answered ? '❌' : '💡');
 
   return `
-    
-      
-        
-          ${q.konu}
-          ${q.zorluk}
-          %${q.cikma_ihtimali}
-        
-        
-          #${idx + 1}
-          <button>
+    <article class="q-card ${cardClass}" id="card-${q.id}" data-id="${q.id}">
+      <div class="card-header">
+        <div class="card-meta">
+          <span class="badge-topic">${q.konu}</span>
+          <span class="badge-difficulty ${q.zorluk}">${q.zorluk}</span>
+          <span class="badge-prob ${probBadgeClass(q.cikma_ihtimali)}">%${q.cikma_ihtimali} Çıkar</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn-fav" data-qid="${q.id}" title="Favorilere Ekle/Çıkar">
             ${isFav ? '⭐' : '☆'}
-          
-          ${answered ? (isCorrect ? '✅' : '❌') : '⭕'}
-        
+          </button>
+          <span class="card-num">#${idx + 1}</span>
+        </div>
+      </div>
       
+      <div class="card-body">
+        <h3 class="question-text">${q.soru}</h3>
+        <div class="options-list">
+          ${opts}
+        </div>
+        <div class="explanation-box ${explShow} ${explTheme}" id="expl-${q.id}">
+          <span class="explanation-icon">${explIcon}</span>
+          <span class="explanation-text">${q.aciklama}</span>
+        </div>
+      </div>
       
-        ${q.soru}
-        ${opts}
-        
-          ${explIcon}${q.aciklama}
-        
-      
-      
-        <button>
+      <div class="card-footer">
+        <button class="btn-show-answer" data-qid="${q.id}">
           ${answered ? 'Açıklamayı Gizle/Göster' : 'Cevabı Göster'}
-        
-        ${q.video}
-      
-    `;
+        </button>
+        <span class="source-label">Kaynak: ${q.video}</span>
+      </div>
+    </article>
+  `;
 }
 
 /* ─── KART OLAYLARI ─────────────────────────────────────────── */
@@ -879,9 +892,9 @@ function initSidebar() {
 
 /* ─── NAV OLAYLARI ───────────────────────────────────────────── */
 function initNav() {
-  document.querySelectorAll('.nav-btn[data-filter]:not([data-topic])').forEach(btn => {
+  document.querySelectorAll('.nav-btn[data-mode]').forEach(btn => {
     btn.addEventListener('click', function () {
-      STATE.filter = this.dataset.filter;
+      STATE.filter = this.dataset.mode;
       STATE.topic  = null;
       STATE.page   = 1;
       renderAll();
