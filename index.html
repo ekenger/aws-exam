@@ -1,4 +1,150 @@
-<!doctype html><html><head><meta charset='utf-8'><title>AWS Quiz</title></head>
-<body><h1>AWS Final Quiz</h1>
-<p>🎯 Final | 📚 Tümü | 🟢 Yüksek | 🟡 Orta | 🔴 Düşük</p>
-<p>JSON'lar data klasöründe hazır.</p></body></html>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Final Çalışma Asistanı</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-brand">
+      <span class="brand-icon">☁️</span>
+      <div class="brand-text">
+        <h1>AWS Final Asistanı</h1>
+        <p>Kocaeli Üniversitesi · Bulut Bilişim</p>
+      </div>
+    </div>
+    
+    <div class="header-stats">
+      <div class="stat-pill" title="Toplam Çözülen">
+        <span class="stat-num" id="statTotal">0</span>
+        <span class="stat-label">Toplam</span>
+      </div>
+      <div class="stat-pill correct" title="Doğru Sayısı">
+        <span class="stat-num" id="statCorrect">0</span>
+        <span class="stat-label">Doğru</span>
+      </div>
+      <div class="stat-pill wrong" title="Yanlış Sayısı">
+        <span class="stat-num" id="statWrong">0</span>
+        <span class="stat-label">Yanlış</span>
+      </div>
+      <div class="stat-pill fav" title="Favoriler">
+        <span class="stat-num" id="statFav">0</span>
+        <span class="stat-label">Favori</span>
+      </div>
+      <div class="stat-pill rate" title="Başarı Oranı">
+        <span class="stat-num" id="statRate">0%</span>
+        <span class="stat-label">Başarı</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressBar"></div>
+  </div>
+
+  <div class="app-layout">
+    
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-inner">
+        
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Soru, konu veya anahtar kelime ara...">
+          <button class="search-clear" id="searchClear">✕</button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">MODLAR</div>
+
+          <button class="nav-btn active" data-mode="all">
+            <span class="nav-icon">📚</span>
+            <span class="nav-label">Tüm Sorular</span>
+            <span class="nav-count" id="countAll">0</span>
+          </button>
+
+          <button class="nav-btn highlight" data-mode="critical">
+            <span class="nav-icon">🔥</span>
+            <span class="nav-label">En Kritik</span>
+            <span class="nav-count" id="countCritical">0</span>
+          </button>
+
+          <button class="nav-btn" data-mode="final">
+            <span class="nav-icon">🎯</span>
+            <span class="nav-label">Final Modu</span>
+            <span class="nav-count" id="countFinal">0</span>
+          </button>
+
+          <button class="nav-btn" data-mode="last2hours">
+            <span class="nav-icon">🚀</span>
+            <span class="nav-label">Son 2 Saat</span>
+            <span class="nav-count" id="countLast">0</span>
+          </button>
+
+          <div class="nav-section-title">KİŞİSEL</div>
+
+          <button class="nav-btn" data-mode="wrong">
+            <span class="nav-icon">❌</span>
+            <span class="nav-label">Yanlışlarım</span>
+            <span class="nav-count" id="countWrong">0</span>
+          </button>
+
+          <button class="nav-btn" data-mode="fav">
+            <span class="nav-icon">⭐</span>
+            <span class="nav-label">Favorilerim</span>
+            <span class="nav-count" id="countFav">0</span>
+          </button>
+
+          <div class="nav-section-title">KONULAR</div>
+          <div id="topicList"></div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button class="btn-reset" id="btnReset">
+            🔄 İstatistikleri Sıfırla
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <button class="mobile-menu-btn" id="mobileMenuBtn">
+      <span></span><span></span><span></span>
+    </button>
+
+    <main class="main-content">
+      
+      <div class="mode-banner" id="modeBanner">
+        <span id="bannerIcon">📚</span>
+        <div class="mode-banner-text">
+          <strong id="bannerTitle">Tüm Sorular</strong>
+          <span id="bannerDesc">Tüm soru havuzundan çalışıyorsunuz</span>
+        </div>
+        <div class="mode-banner-meta">
+          <span id="bannerCount">0 soru</span>
+        </div>
+      </div>
+
+      <div class="card-area" id="cardArea">
+        </div>
+
+      <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-icon">🔍</div>
+        <h3>Sonuç Bulunamadı</h3>
+        <p>Bu filtreye uygun soru bulunmuyor.</p>
+      </div>
+
+      <div class="load-more-wrap" id="loadMoreWrap" style="display: none;">
+        <button class="btn-load-more" id="btnLoadMore">Daha Fazla Yükle</button>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
