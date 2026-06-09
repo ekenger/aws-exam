@@ -455,7 +455,6 @@ const STATE = {
   search: '',
   topic: null,
   page: 1,
-  pageSize: 20,
   filtered: []
 };
 
@@ -605,14 +604,11 @@ function renderTopicNav() {
 /* ─── AKTİF NAV ─────────────────────────────────────────────── */
 function updateActiveNav() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    // Önce hepsinden active class'ını kaldır
     btn.classList.remove('active');
     
-    // Filtre 'all', 'critical', vb. ana butonlarsa
     if (btn.dataset.mode === STATE.filter) {
       btn.classList.add('active');
     }
-    // Konu butonlarıysa
     else if (btn.dataset.filter === 'topic' && STATE.filter === 'topic' && btn.dataset.topic === STATE.topic) {
       btn.classList.add('active');
     }
@@ -637,7 +633,7 @@ function updateBanner(count) {
   document.getElementById('bannerIcon').textContent  = info.icon;
   document.getElementById('bannerTitle').textContent = title;
   document.getElementById('bannerDesc').textContent  = desc;
-  document.getElementById('bannerCount').textContent = count + ' soru';
+  document.getElementById('bannerCount').textContent = STATE.page + ' / ' + count;
 }
 
 /* ─── YARDIMCI ──────────────────────────────────────────────── */
@@ -734,7 +730,6 @@ function attachCardEvents() {
       saveAnswers();
       saveWrong();
 
-      /* Sadece bu kartı yenile */
       const cardEl = document.getElementById(`card-${qid}`);
       if (cardEl) {
         const idx    = STATE.filtered.findIndex(x => x.id === qid);
@@ -840,14 +835,21 @@ function attachSingleCard(cardEl) {
   }
 }
 
-/* ─── ANA RENDER ────────────────────────────────────────────── */
+/* ─── ANA RENDER (TEK SORU MODU) ────────────────────────────── */
 function renderAll() {
   STATE.filtered  = getFiltered();
   const total     = STATE.filtered.length;
-  const slice     = STATE.filtered.slice(0, STATE.page * STATE.pageSize);
+
+  // Sayfa sınırlarını koru
+  if (STATE.page > total && total > 0) STATE.page = total;
+  if (STATE.page < 1) STATE.page = 1;
+
+  // SADECE aktif sayfadaki 1 soruyu al
+  const slice     = STATE.filtered.slice(STATE.page - 1, STATE.page);
+  
   const area      = document.getElementById('cardArea');
   const emptyEl   = document.getElementById('emptyState');
-  const moreEl    = document.getElementById('loadMoreWrap');
+  const moreEl    = document.getElementById('loadMoreWrap'); // Navigasyon barı
 
   updateBanner(total);
   updateStats();
@@ -855,15 +857,45 @@ function renderAll() {
   updateActiveNav();
 
   if (total === 0) {
-    area.innerHTML      = '';
+    area.innerHTML        = '';
     emptyEl.style.display = 'block';
     moreEl.style.display  = 'none';
     return;
   }
 
   emptyEl.style.display = 'none';
-  area.innerHTML = slice.map((q, i) => buildCard(q, i)).join('');
-  moreEl.style.display  = slice.length < total ? 'block' : 'none';
+  // Kartı çiz
+  area.innerHTML = slice.map((q) => buildCard(q, STATE.page - 1)).join('');
+  
+  // Önceki / Sonraki butonlarını yerleştir
+  moreEl.style.display = 'flex';
+  moreEl.style.justifyContent = 'center';
+  moreEl.style.gap = '12px';
+  
+  moreEl.innerHTML = `
+    <button class="btn-load-more" id="btnPrev" ${STATE.page === 1 ? 'style="display:none"' : ''}>⬅️ Önceki</button>
+    <button class="btn-load-more" id="btnNext" ${STATE.page === total ? 'style="display:none"' : ''}>Sonraki ➡️</button>
+  `;
+
+  // Navigasyon tıklama olayları
+  const btnPrev = document.getElementById('btnPrev');
+  if (btnPrev) {
+    btnPrev.addEventListener('click', () => { 
+      STATE.page--; 
+      renderAll(); 
+      window.scrollTo({ top: 0, behavior: 'smooth' }); 
+    });
+  }
+
+  const btnNext = document.getElementById('btnNext');
+  if (btnNext) {
+    btnNext.addEventListener('click', () => { 
+      STATE.page++; 
+      renderAll(); 
+      window.scrollTo({ top: 0, behavior: 'smooth' }); 
+    });
+  }
+
   attachCardEvents();
 }
 
@@ -930,19 +962,6 @@ function initSearch() {
   });
 }
 
-/* ─── DAHA FAZLA ─────────────────────────────────────────────── */
-function initLoadMore() {
-  document.getElementById('btnLoadMore').addEventListener('click', () => {
-    STATE.page++;
-    const slice = STATE.filtered.slice(0, STATE.page * STATE.pageSize);
-    const area  = document.getElementById('cardArea');
-    area.innerHTML = slice.map((q, i) => buildCard(q, i)).join('');
-    document.getElementById('loadMoreWrap').style.display =
-      slice.length < STATE.filtered.length ? 'block' : 'none';
-    attachCardEvents();
-  });
-}
-
 /* ─── SIFIRLA ────────────────────────────────────────────────── */
 function initReset() {
   document.getElementById('btnReset').addEventListener('click', () => {
@@ -963,7 +982,6 @@ function init() {
   initSidebar();
   initNav();
   initSearch();
-  initLoadMore();
   initReset();
   renderAll();
 }
